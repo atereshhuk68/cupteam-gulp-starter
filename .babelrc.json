@@ -1,0 +1,9 @@
+{
+  "presets": ["@babel/env"],
+  "plugins": ["minify-mangle-names","@babel/plugin-transform-arrow-functions", "transform-remove-console"],
+  "comments": false,
+  "compact": true,
+  "ignore": [
+    "src/js/vendors"
+  ]
+}
