@@ -46,5 +46,8 @@
     "not Edge < 40",
     "not op_mob < 46",
     "not bb < 10"
-  ]
+  ],
+  "dependencies": {
+    "bootstrap": "^4.5.3"
+  }
 }

@@ -83,8 +83,10 @@ const fileinclude = () => {
  * add webp to html
  */
 const addWebpToHtml = () => {
-	return src(["build/*.html"]).pipe(_webphtml()).pipe(dest("build/webp"));
+	return src(["build/*.html"]).pipe(_webphtml()).pipe(dest("build"));
 };
+//! Call this task when you finish a project
+exports.addWebpToHtml = addWebpToHtml;
 //! DevServer
 /*
  * devserver config
@@ -121,6 +123,8 @@ const fontVals = {
 	semibolditalic: 600,
 	bold: 700,
 	bolditalic: 700,
+	extrabold: 800,
+	extrabolditalic: 800,
 	black: 900,
 	blackitalic: 900,
 };
@@ -146,12 +150,7 @@ const fontsStyle = () => {
 					let fontname = items[i].split(".");
 					fontname = fontname[0];
 					if (c_fontname != fontname) {
-						_fs.appendFile(
-							`${fontScss}, @include font-face("${fontname}", "${fontname}", ${fontWeight(
-								fontname
-							)});\r\n`,
-							() => {}
-						);
+						_fs.appendFile(`${fontScss}`, `@include font-face("${fontname}", "${fontname}", ${fontWeight(fontname)});\r\n`, () => {});
 					}
 					c_fontname = fontname;
 				}
@@ -161,20 +160,17 @@ const fontsStyle = () => {
 		}
 	});
 };
-const moveFonts = () => {
-	return src("src/fonts/**.{woff,woff2}").pipe(dest("build/fonts"));
-};
 
 //! Images
 const convertToWebp = () => {
 	return src("src/img/**/*.{jpg,png}").pipe(_webp()).pipe(dest("build/img"));
 };
 const compressImgs = () => {
-	return src("src/img/**/*.{jpg,png,svg}")
+	return src("src/img/**/*.{jpg,png,svg,webp}")
 		.pipe(_cache(_imagemin()))
 		.pipe(dest("build/img"));
 };
-//! Все библиотеки в один файл
+//! JS
 const concatJSLibs = () => {
 	return src("src/js/vendors/*.js")
 		.pipe(_jsconcat("bundle.js"))
@@ -188,11 +184,11 @@ const concatJSLibs = () => {
 const startWatch = () => {
 	watch("src/pages/**/*.html", fileinclude);
 	watch("src/scss/**/*.scss", sassScss);
-	watch("src/fonts/*.ttf", series(convertFonts, fontsStyle, moveFonts));
-	watch("src/img/", compressImgs);
+	watch("src/fonts/*.ttf", series(convertFonts, fontsStyle));
+	watch("src/img/", series(convertToWebp, compressImgs));
 	watch("src/js/libs/*.js", concatJSLibs);
 	watch(["src/css/*.css", "!src/css/style.css"], concatCSS);
 };
 
 //? BUILD
-exports.default = parallel(concatCSS,compressImgs,concatJSLibs,moveFonts,fileinclude,sassScss,browsersync,startWatch);
+exports.default = parallel(concatCSS,compressImgs,concatJSLibs,fileinclude,sassScss,browsersync,startWatch);
