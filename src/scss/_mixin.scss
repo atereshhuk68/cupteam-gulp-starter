@@ -1,4 +1,4 @@
-// Font Face для TTF шрифтов
+//* Font Face для TTF шрифтов
 @mixin font-face($font-family, $url, $weight) {
   @font-face {
     font-family: '#{$font-family}';
