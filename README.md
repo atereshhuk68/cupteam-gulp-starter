@@ -10,3 +10,9 @@ git clone https://github.com/atereshhuk68/cupteam-gulp-starter.git .; rm -rf tru
 3. Запустить gulp: **gulp**
 ---
 [Сайт студии](https://cupteam.space)
+---
+### Новое
+Добавлен webpack-stream для работы с JS.
+Добавлены пакеты для очистки лишнего CSS кода (gulp-stylelint и gulp-purgecss)
+Удалены лишние пакеты
+Удален лишний код

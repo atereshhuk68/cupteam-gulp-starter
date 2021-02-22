@@ -1,5 +1,7 @@
 //* Gulp moduls
 const { src, series, parallel, watch, dest } = require("gulp");
+//* Webpack Stream
+const _webpack = require("webpack-stream");
 //* Styles
 const _sass = require("gulp-sass");
 const _cssconcat = require("gulp-concat-css");
@@ -8,8 +10,6 @@ const _autoprefixer = require("gulp-autoprefixer");
 //* HTML
 const _fileinclude = require("gulp-file-include");
 const _htmlbeautify = require("gulp-html-beautify");
-//* JS
-const _jsconcat = require("gulp-concat");
 //* Server
 const _bs = require("browser-sync").create();
 //* Files
@@ -20,6 +20,34 @@ const _ttf2woff2 = require("gulp-ttf2woff2");
 const _fs = require("fs");
 const _webp = require("gulp-webp");
 const _webphtml = require("gulp-webp-in-html");
+//* Stylelint
+const _stylelint = require("gulp-stylelint");
+//* PurgeCss
+const _purgecss = require("gulp-purgecss");
+
+//! Webpack Mode
+let isDev = true;
+
+//! Webpack Config
+let webpackConf = {
+	watch: true,
+	mode: isDev ? 'development' : 'production',
+	devtool: isDev ? 'eval-source-map' : 'none',
+	output: {
+		filename: "all.js",
+	},
+	module: {
+		rules: [
+			{
+				test: /\.m?js$/,
+				exclude: /node_modules/,
+				use: {
+					loader: "babel-loader",
+				},
+			},
+		],
+	},
+};
 
 //! Styles
 /*
@@ -59,6 +87,20 @@ const concatCSS = () => {
 		.pipe(_cssnano())
 		.pipe(dest("build/css"));
 };
+/*
+* perfect css. lint css and remove useless css 
+*/
+const perfectCSS = () => {
+	return src("build/css/*.css")
+	.pipe(_purgecss({
+		content: ['build/**/*.{html,js}'],
+	}))
+	.pipe(_stylelint({
+		fix: true
+	}))
+	.pipe(_cssnano())
+	.pipe(dest('build/css'))
+}
 //! HTML
 /*
  * include html files
@@ -96,7 +138,7 @@ const browsersync = () => {
 		server: {
 			baseDir: "build/",
 		},
-		files: ["build/*.html", "build/**/*.js", "build/**/*.css"],
+		files: ["build/*.html", "build/js/all.js", "build/**/*.css"],
 		notify: false,
 		open: "local",
 		ghostMode: {
@@ -129,11 +171,9 @@ const fontVals = {
 	blackitalic: 900,
 };
 const fontWeight = (font) => {
-	for (let item of Object.keys(fontVals)) {
-		if (font.toLowerCase().includes(item)) {
-			return fontVals[item];
-		}
-	}
+	Object.keys(fontVals).forEach((key) => {
+		if (font.toLowerCase().includes(key)) return fontVals[key];
+	});
 };
 const convertFonts = () => {
 	src("src/fonts/*.ttf").pipe(_ttf2woff()).pipe(dest("build/fonts/"));
@@ -150,7 +190,13 @@ const fontsStyle = () => {
 					let fontname = items[i].split(".");
 					fontname = fontname[0];
 					if (c_fontname != fontname) {
-						_fs.appendFile(`${fontScss}`, `@include font-face("${fontname}", "${fontname}", ${fontWeight(fontname)});\r\n`, () => {});
+						_fs.appendFile(
+							`${fontScss}`,
+							`@include font-face("${fontname}", "${fontname}", ${fontWeight(
+								fontname
+							)});\r\n`,
+							() => {}
+						);
 					}
 					c_fontname = fontname;
 				}
@@ -171,10 +217,10 @@ const compressImgs = () => {
 		.pipe(dest("build/img"));
 };
 //! JS
-const concatJSLibs = () => {
-	return src("src/js/vendors/*.js")
-		.pipe(_jsconcat("bundle.js"))
-		.pipe(dest("build/js/vendors"));
+const jsTask = () => {
+	return src("src/js/index.js")
+		.pipe(_webpack(webpackConf))
+		.pipe(dest("build/js/"));
 };
 
 //! Watch
@@ -186,9 +232,20 @@ const startWatch = () => {
 	watch("src/scss/**/*.scss", sassScss);
 	watch("src/fonts/*.ttf", series(convertFonts, fontsStyle));
 	watch("src/img/", series(convertToWebp, compressImgs));
-	watch("src/js/libs/*.js", concatJSLibs);
+	watch("src/js/*.js", jsTask);
 	watch(["src/css/*.css", "!src/css/style.css"], concatCSS);
 };
 
-//? BUILD
-exports.default = parallel(concatCSS,compressImgs,concatJSLibs,fileinclude,sassScss,browsersync,startWatch);
+//? Dev
+exports.default = parallel(
+	concatCSS,
+	compressImgs,
+	jsTask,
+	fileinclude,
+	sassScss,
+	browsersync,
+	startWatch
+);
+
+//? Perfect CSS
+exports.perfect = series(perfectCSS)
